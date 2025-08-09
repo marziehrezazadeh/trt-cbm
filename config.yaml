@@ -1,0 +1,54 @@
+project:
+  seed_list: [123, 456]
+  output_dir: "outputs"
+
+risk:
+  epsilon_grid: [0.01, 0.03, 0.05]
+  cof_grid: [1.0, 5.0, 20.0]
+  rcrit_rule: "Rcrit = CoF * epsilon"
+  rcrit_alt_quantile: 0.8
+
+planning_horizon:
+  H_cmaps_grid: [30, 60, 90]
+  H_sim: 100
+
+cost_model:
+  inspect_cost: 1.0
+  repair_cost: 10.0
+  downtime_penalty_by_cof:
+    "1.0": 5.0
+    "5.0": 20.0
+    "20.0": 80.0
+
+cmaps:
+  sensors: [11, 4, 15, 12, 9]
+  normalization: "zscore"
+  detrend: true
+  split:
+    train_units: "1-80"
+    val_units: "81-90"
+    test_units: "91-100"
+  data_root: "data/CMAPSS"
+
+simulation:
+  wiener:
+    L: 1.0
+    mu_grid: [0.02, 0.05, 0.1]
+    sigma_grid: [0.05, 0.1]
+    n_paths: 500
+    dt: 0.1
+  gamma:
+    L: 1.0
+    kappa_grid: [0.02, 0.05, 0.1]
+    theta: 1.0
+    n_paths: 500
+    dt: 0.1
+
+survival:
+  model: "cox"     # or "deepsurv"
+  conformal:
+    coverage: 0.9
+    method: "split"
+
+baselines:
+  include_pomdp: false
