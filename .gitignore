@@ -205,3 +205,22 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- Project artifacts (experiments) ---
+figs/
+tables/
+outputs/
+
+# Optional: local datasets
+data/CMAPSS/
+data/*.npz
+data/*.zip
+
+# Keep placeholders even if dirs are ignored
+!data/README.md
+!figs/.gitkeep
+!tables/.gitkeep
+!outputs/.gitkeep
+
+
+
