@@ -1,6 +1,6 @@
 # Run a small grid over CoF and epsilon to compute TRT on Wiener demo outputs.
 import numpy as np, os, csv, sys
-sys.path.append(os.path.dirname(__file__))  # allow "python policies/run_trt_demo.py"
+sys.path.append(os.path.dirname(__file__))  # allow: python policies/run_trt_demo.py
 
 from trt_policy import compute_risk_curve, rcrit_from_rule, infer_trt
 
