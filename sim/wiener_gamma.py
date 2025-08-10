@@ -1,30 +1,56 @@
 # Parametric Wiener simulation + first-passage + PoF(t) export.
-import argparse, numpy as np, os
+import argparse
+import numpy as np
+import os
 
 def simulate_wiener(mu, sigma, L, n_paths, H, dt, seed=123):
-    rng = np.random.RandomState(seed)
-    n_steps = int(H/dt) + 1
-    t = np.linspace(0.0, H, n_steps)
-    X = np.zeros((n_paths, n_steps))
+    """Simulate n_paths Wiener-with-drift trajectories on [0, H] with step dt."""
+    rng = np.random.default_rng(seed)
+    n_steps = int(round(H / dt)) + 1
+    times = np.arange(n_steps, dtype=float) * dt
+    paths = np.zeros((n_paths, n_steps), dtype=float)
     for i in range(n_paths):
         x = 0.0
         for k in range(1, n_steps):
-            x += mu*dt + sigma*np.sqrt(dt)*rng.randn()
-            X[i, k] = x
-    return t, X
+            # Euler step: x += mu*dt + sigma*sqrt(dt)*N(0,1)
+            x += mu * dt + sigma * np.sqrt(dt) * rng.standard_normal()
+            paths[i, k] = x
+    return times, paths
 
-def first_passage_times(paths, times, L=1.0):
-    fpt = np.full(paths.shape[0], np.inf)
-    hit = (paths >= L)
-    for i in range(paths.shape[0]):
-        idx = np.argmax(hit[i])
-        if hit[i, idx]:
-            fpt[i] = times[idx]
+def first_passage_times(paths, times, L=1.0, refine="linear"):
+    """
+    Return first-passage time for each path crossing level L.
+    refine: "none" | "linear"  (linear reduces late-count bias)
+    """
+    n = paths.shape[0]
+    fpt = np.full(n, np.inf, dtype=float)
+
+    for i in range(n):
+        xi = paths[i]
+        crossed = np.where(xi >= L)[0]
+        if crossed.size == 0:
+            continue
+        k = crossed[0]
+        if refine == "none" or k == 0:
+            fpt[i] = times[k]
+            continue
+
+        # linear interpolation inside [times[k-1], times[k]]
+        t0, t1 = times[k-1], times[k]
+        x0, x1 = xi[k-1], xi[k]
+        if x1 == x0:
+            fpt[i] = t1
+        else:
+            frac = (L - x0) / (x1 - x0)
+            if frac < 0.0: frac = 0.0
+            if frac > 1.0: frac = 1.0
+            fpt[i] = t0 + frac * (t1 - t0)
     return fpt
 
 def pof_from_fpt(fpt, t_grid):
+    """Empirical PoF(t): fraction of paths with FPT <= t."""
     finite = np.isfinite(fpt)
-    return np.array([(fpt[finite] <= tt).mean() if finite.any() else 0.0 for tt in t_grid])
+    return np.array([(fpt[finite] <= tt).mean() if finite.any() else 0.0 for tt in t_grid], dtype=float)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -37,12 +63,14 @@ def main():
     ap.add_argument("--seed", type=int, default=123)
     args = ap.parse_args()
 
-    t, X = simulate_wiener(args.mu, args.sigma, args.L, args.n_paths, args.H, args.dt, args.seed)
-    fpt = first_passage_times(X, t, args.L)
-    pof = pof_from_fpt(fpt, t)
+    times, paths = simulate_wiener(args.mu, args.sigma, args.L, args.n_paths, args.H, args.dt, args.seed)
+    fpt = first_passage_times(paths, times, L=args.L, refine="linear")
+    pof = pof_from_fpt(fpt, times)
+    # ensure monotonic (helpful for plotting/reporting)
+    pof = np.maximum.accumulate(pof)
 
     os.makedirs("tables", exist_ok=True)
-    np.savez("tables/wiener_demo.npz", times=t, pof=pof, fpt=fpt)
+    np.savez("tables/wiener_demo.npz", times=times, pof=pof, fpt=fpt)
     print("[SIM] Saved PoF/FPT to tables/wiener_demo.npz")
 
 if __name__ == "__main__":
