@@ -25,7 +25,3 @@ def infer_trt(times, risk, rcrit):
     if y1 == y0:  # flat segment
         return float(x1)
     return float(x0 + (rcrit - y0) * (x1 - y0) / (y1 - y0))
-
-    if risk[idx] >= rcrit:
-        return float(times[idx])
-    return float("inf")
